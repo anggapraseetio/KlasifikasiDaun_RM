@@ -1,0 +1,10 @@
+numpy
+opencv-python
+scikit-image
+scikit-learn
+matplotlib
+seaborn
+joblib
+tqdm
+rembg
+Pillow
