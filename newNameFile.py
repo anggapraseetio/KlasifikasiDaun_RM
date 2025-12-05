@@ -3,7 +3,7 @@ import os
 # ================================
 # KONFIGURASI FOLDER DATASET
 # ================================
-folder_dataset = "./dataset/train"
+folder_dataset = "./dataset/test"
 kategori = ["Sehat", "Tidak_Sehat"]
 
 # ================================

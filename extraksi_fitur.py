@@ -7,7 +7,7 @@ from skimage.feature import graycomatrix, graycoprops
 # =======================================
 # KONFIGURASI DATASET
 # =======================================
-folder_latih = "./dataset/train"
+folder_latih = "./dataset/test"
 kategori = ["Sehat", "Tidak_Sehat"]
 UKURAN = 128
 
@@ -104,7 +104,7 @@ print("✅ Ekstraksi fitur selesai!")
 # =======================================
 df = pd.DataFrame(data_fitur, columns=nama_kolom)
 
-output_csv = "fitur_dataset_daun_new.csv"
+output_csv = "fitur_dataset_daun_test.csv"
 df.to_csv(output_csv, index=False)
 
 print(f"📁 File CSV berhasil dibuat: {output_csv}")

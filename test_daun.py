@@ -14,7 +14,7 @@ scaler = joblib.load("./model/scaler_daun_FINAL.pkl")
 
 IMG_SIZE = 128
 categories = ["Sehat", "Tidak_Sehat"]
-test_image_path = "./dataset/test/test5.jpg"
+test_image_path = "./dataset/test1.jpg"
 
 # =====================================================
 # EXTRACT FEATURES
