@@ -17,20 +17,16 @@ folder_uji = "./dataset/test"
 kategori = ["Sehat", "Tidak_Sehat"]
 UKURAN = 128
 
-# FUNGSI EKSTRAKSI FITUR
 def ekstrak_fitur(gambar_bgr):
 
-    # Kompres ulang untuk konsistensi
     _, buffer = cv2.imencode('.jpg', gambar_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
     gambar_bgr = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
 
-    # Preprocessing
     gambar_ubah = cv2.resize(gambar_bgr, (UKURAN, UKURAN))
     gambar_gray = cv2.cvtColor(gambar_ubah, cv2.COLOR_BGR2GRAY)
     gambar_gray = cv2.GaussianBlur(gambar_gray, (3, 3), 0)
     hsv = cv2.cvtColor(gambar_ubah, cv2.COLOR_BGR2HSV)
 
-    # GLCM
     glcm = graycomatrix(
         gambar_gray,
         distances=[1],
@@ -44,11 +40,9 @@ def ekstrak_fitur(gambar_bgr):
     energi = graycoprops(glcm, 'energy').mean()
     korelasi = graycoprops(glcm, 'correlation').mean()
 
-    # Rasio daun coklat
     masker_coklat = cv2.inRange(hsv, (15, 50, 50), (35, 255, 200))
     rasio_coklat = np.sum(masker_coklat > 0) / (UKURAN * UKURAN)
 
-    # Deteksi lubang (area hitam)
     _, mask_thr = cv2.threshold(gambar_gray, 70, 255, cv2.THRESH_BINARY_INV)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask_thr = cv2.morphologyEx(mask_thr, cv2.MORPH_OPEN, kernel)
@@ -57,11 +51,9 @@ def ekstrak_fitur(gambar_bgr):
     rasio_lubang = sum(cv2.contourArea(c) for c in kontur) / (UKURAN * UKURAN)
     jumlah_lubang = len(kontur)
 
-    # =================
     fitur_glcm = [kontras, homogenitas, energi, korelasi]
     fitur_tambahan = [rasio_coklat, rasio_lubang, jumlah_lubang]
 
-    # Total fitur = 7
     return np.hstack((fitur_glcm, fitur_tambahan))
 
 
