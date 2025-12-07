@@ -86,16 +86,23 @@ skala = StandardScaler()
 fitur_latih_scaled = skala.fit_transform(fitur_latih)
 fitur_uji_scaled = skala.transform(fitur_uji)
 
-# TRAINING MODEL RANDOM FOREST
+
+print("\n" + "="*60)
+print("               TRAINING MODEL RANDOM FOREST")
+print("="*60)
+
 model = RandomForestClassifier(
-    n_estimators=800,
-    max_depth=None,
-    min_samples_split=2,
-    min_samples_leaf=1,
-    class_weight="balanced",
+    n_estimators=300,         
+    max_depth=15,           
+    min_samples_split=10,      
+    min_samples_leaf=4,       
+    max_features='sqrt',     
     random_state=42,
+    bootstrap=False,
     n_jobs=-1
 )
+
+print("Training model...")
 model.fit(fitur_latih_scaled, label_latih)
 
 # PREDIKSI
@@ -108,83 +115,114 @@ akurasi_uji = accuracy_score(label_uji, pred_uji)
 print("\n" + "="*60)
 print("               HASIL AKURASI MODEL RANDOM FOREST")
 print("="*60)
-print(f"AKURASI TRAINING : {akurasi_latih*100:.2f}%")
-print(f"AKURASI TESTING  : {akurasi_uji*100:.2f}%")
-print(f"SELISIH          : {abs(akurasi_latih - akurasi_uji)*100:.2f}%")
+print(f"AKURASI TRAINING  : {akurasi_latih*100:.2f}%")
+print(f"AKURASI TESTING   : {akurasi_uji*100:.2f}%")
+print(f"SELISIH (Train-Test): {abs(akurasi_latih - akurasi_uji)*100:.2f}%")
 print("="*60)
 
-# Diagnosa Overfitting
+# Diagnosa Model
 print("\nDIAGNOSA MODEL:")
-if akurasi_latih > 0.995 and (akurasi_latih - akurasi_uji) > 0.12:
-    print("OVERFITTING BERAT")
-elif (akurasi_latih - akurasi_uji) > 0.10:
-    print("OVERFITTING RINGAN")
-elif abs(akurasi_latih - akurasi_uji) <= 0.05:
-    print("MODEL BAGUS & STABIL")
+selisih = akurasi_latih - akurasi_uji
+
+if akurasi_latih > 0.995 and selisih > 0.12:
+    print("⚠️  OVERFITTING BERAT - Model terlalu menghafal data training")
+elif selisih > 0.10:
+    print("⚠️  OVERFITTING RINGAN - Perlu tuning parameter lebih lanjut")
+elif abs(selisih) <= 0.05:
+    print("✅ MODEL BAGUS & STABIL - Generalisasi sangat baik!")
 elif akurasi_uji > akurasi_latih:
-    print("UNDERFITTING")
+    print("⚠️  UNDERFITTING - Model terlalu sederhana")
 else:
-    print("MODEL BAGUS")
+    print("✅ MODEL BAGUS - Performa seimbang")
+
+# FEATURE IMPORTANCE
+print("\n" + "="*60)
+print("               FEATURE IMPORTANCE")
+print("="*60)
+feature_names = ['Kontras', 'Homogenitas', 'Energi', 'Korelasi', 
+                 'Rasio Coklat', 'Rasio Lubang', 'Jumlah Lubang']
+importances = model.feature_importances_
+
+for name, importance in zip(feature_names, importances):
+    print(f"{name:20s}: {importance:.4f}")
 
 # LAPORAN KLASIFIKASI
-print("\n" + "—"*50)
+print("\n" + "—"*60)
 print("LAPORAN KLASIFIKASI (TEST SET)")
-print("—"*50)
+print("—"*60)
 print(classification_report(label_uji, pred_uji, target_names=kategori))
 
 # CONFUSION MATRIX
 cm = confusion_matrix(label_uji, pred_uji)
-plt.figure(figsize=(7,5.5))
+plt.figure(figsize=(8,6))
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
             xticklabels=kategori, yticklabels=kategori,
-            annot_kws={"size": 16})
-plt.ylabel("Aktual")
-plt.xlabel("Prediksi")
-plt.title(f"Confusion Matrix (Akurasi: {akurasi_uji*100:.2f}%)")
+            annot_kws={"size": 18})
+plt.ylabel("Aktual", fontsize=12)
+plt.xlabel("Prediksi", fontsize=12)
+plt.title(f"Confusion Matrix\nAkurasi Test: {akurasi_uji*100:.2f}%", 
+          fontsize=13)
+plt.tight_layout()
 plt.show()
 
-# (1) HISTOGRAM SEBARAN FITUR
-plt.figure(figsize=(10,5))
-plt.title("Histogram Sebaran Nilai Fitur (Setelah Scaling)")
-plt.hist(fitur_latih_scaled[:,0], bins=40)
-plt.xlabel("Nilai Fitur (Fitur HOG pertama)")
-plt.ylabel("Jumlah")
+# FEATURE IMPORTANCE CHART
+plt.figure(figsize=(10,6))
+indices = np.argsort(importances)[::-1]
+plt.bar(range(len(importances)), importances[indices])
+plt.xticks(range(len(importances)), [feature_names[i] for i in indices], rotation=45, ha='right')
+plt.xlabel("Fitur")
+plt.ylabel("Importance")
+plt.title("Feature Importance - Random Forest")
+plt.tight_layout()
 plt.show()
 
-# (2) ROC CURVE
+# ROC CURVE
 pred_proba = model.predict_proba(fitur_uji_scaled)[:,1]
 fpr, tpr, _ = roc_curve(label_uji, pred_proba)
 roc_auc = auc(fpr, tpr)
 
-plt.figure(figsize=(7,5))
-plt.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}")
-plt.plot([0,1], [0,1], linestyle="--")
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("ROC Curve")
-plt.legend()
+plt.figure(figsize=(8,6))
+plt.plot(fpr, tpr, linewidth=2, label=f"Random Forest (AUC = {roc_auc:.3f})")
+plt.plot([0,1], [0,1], linestyle="--", color='gray', label='Random Classifier')
+plt.xlabel("False Positive Rate", fontsize=11)
+plt.ylabel("True Positive Rate", fontsize=11)
+plt.title("ROC Curve", fontsize=13)
+plt.legend(fontsize=10)
+plt.grid(alpha=0.3)
+plt.tight_layout()
 plt.show()
 
-# (6) PRECISION–RECALL CURVE
+# PRECISION–RECALL CURVE
 precision, recall, _ = precision_recall_curve(label_uji, pred_proba)
+pr_auc = auc(recall, precision)
 
-plt.figure(figsize=(7,5))
-plt.plot(recall, precision)
-plt.xlabel("Recall")
-plt.ylabel("Precision")
-plt.title("Precision–Recall Curve")
+plt.figure(figsize=(8,6))
+plt.plot(recall, precision, linewidth=2, label=f'PR AUC = {pr_auc:.3f}')
+plt.xlabel("Recall", fontsize=11)
+plt.ylabel("Precision", fontsize=11)
+plt.title("Precision–Recall Curve", fontsize=13)
+plt.legend(fontsize=10)
+plt.grid(alpha=0.3)
+plt.tight_layout()
 plt.show()
 
-# (7) LAPORAN METRIK RINGKAS
-print("\nRINGKASAN METRIK:")
-print(f"- Akurasi: {akurasi_uji*100:.2f}%")
-print(f"- AUC ROC: {roc_auc:.3f}")
-print(f"- Precision rata-rata: {precision.mean():.3f}")
-print(f"- Recall rata-rata: {recall.mean():.3f}")
+print("\n" + "="*60)
+print("               RINGKASAN METRIK EVALUASI")
+print("="*60)
+print(f"Akurasi Training   : {akurasi_latih*100:.2f}%")
+print(f"Akurasi Testing    : {akurasi_uji*100:.2f}%")
+print(f"SELISIH            : {abs(akurasi_latih - akurasi_uji)*100:.2f}%")
+print(f"AUC ROC            : {roc_auc:.3f}")
+print(f"AUC PR             : {pr_auc:.3f}")
+print(f"Precision rata-rata: {precision.mean():.3f}")
+print(f"Recall rata-rata   : {recall.mean():.3f}")
+print("="*60)
 
 # SIMPAN MODEL
 os.makedirs("./model", exist_ok=True)
 joblib.dump(model, "./model/random_forest_daun_FINAL.pkl")
 joblib.dump(skala, "./model/scaler_daun_FINAL.pkl")
 
-print("\nModel & scaler berhasil disimpan!")
+print("\n✅ Model & scaler berhasil disimpan!")
+print("   - random_forest_daun_FINAL.pkl")
+print("   - scaler_daun_FINAL.pkl")
